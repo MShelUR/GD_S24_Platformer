@@ -1,0 +1,4 @@
+repository "Black Magic 2025-02-07_19-19-11/Black Magic@2475792283457@cloud"
+  path "/"
+    br "/main"
+    co "/main"
