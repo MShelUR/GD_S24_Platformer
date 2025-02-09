@@ -7,9 +7,15 @@ using UnityEngine.Tilemaps;
 
 public class Character : MonoBehaviour
 {
+    Color background_color = new Color(.7f,.9f,.8f,1f);
+
+    Dictionary<float, Color> height_color_map;
+    
     float jump_height = 1.5f;
     float max_speed = 10f;
     int direction = 1; // right
+
+    System.Random rnd = new System.Random();
 
     string cur_move;
     int cur_frames = 0; // count frames for specials
@@ -43,7 +49,9 @@ public class Character : MonoBehaviour
             if (did_sax_bounce) {
                 new_vel = new Vector2(direction*5,15); // more vertical if bounce
             }
-            character.linearVelocity = new_vel;
+            if (will_die == false) {
+                character.linearVelocity = new_vel;
+            }
             transform.eulerAngles = new Vector3(
                 transform.eulerAngles.x,
                 transform.eulerAngles.x,
@@ -91,7 +99,7 @@ public class Character : MonoBehaviour
         grid = destructable_tileset.GetComponent<GridLayout>();
         character = GetComponent<Rigidbody2D>();
         cam = Camera.main;
-        spawn_point = this.spawn_point;
+        //spawn_point = this.spawn_point;
         // set up movelist
         move_map = new Dictionary<string, System.Action>();
         // add all moves in reverse length order so longer combos are checked first
@@ -99,7 +107,16 @@ public class Character : MonoBehaviour
         Application.targetFrameRate = 60;
         
         transform.position = spawn_point.transform.position;
+
+        height_color_map = new Dictionary<float, Color>(); // y map for colors
+        // add in descending order
+        height_color_map.Add(1000f,background_color); // above ground
+        height_color_map.Add(-20f,new Color(.9f,.6f,.9f,1f)); // placeholder
+        height_color_map.Add(-40f,new Color(.9f,.8f,.7f,1f)); // heck
     }
+
+    Vector3 death_shake = new Vector3(0,0);
+
 
     // Update is called once per frame
     void Update()
@@ -107,15 +124,32 @@ public class Character : MonoBehaviour
         // handle camera
 
         Vector3 charpos = character.transform.position;
-        Vector3 newpos = cam.transform.position;
+        Vector3 newpos = cam.transform.position-death_shake;
 
         newpos.x = Math.Clamp(newpos.x,charpos.x-8,charpos.x+8);
         //newpos.x = Math.Max(Math.Min(newpos.x,charpos.x+50),charpos.x-50); // move cam when player gets near bounds
         newpos.y = charpos.y + Math.Min(0,character.linearVelocity.y*.02f+.1f);
 
+        if (will_die && died == false) { // if will die, shake screen
+            death_shake.x += rnd.Next(-5,6)*.03f;
+            death_shake.y += rnd.Next(-5,6)*.03f;
+        } else {
+
+        }
+
+        Color goal = cam.backgroundColor;
+        foreach(KeyValuePair<float, Color> height in height_color_map) {
+            if (transform.position.y < height.Key) {
+                goal = height.Value;
+            }
+        }
+
+        Color lerpedColor = Color.Lerp(cam.backgroundColor, goal, .01f);
+        cam.backgroundColor = lerpedColor;
+
         //newpos -= Vector3.forward*100; // move it back so no near clip
 
-        cam.transform.position = newpos;
+        cam.transform.position = newpos+death_shake;
         
         if (cur_move != null) {
             print(cur_move);

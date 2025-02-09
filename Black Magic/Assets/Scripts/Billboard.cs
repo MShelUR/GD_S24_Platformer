@@ -1,6 +1,7 @@
 using UnityEngine;
 using System.Collections;
 using System.Collections.Generic; // dictionaries
+using System;
 
 public class Billboard : MonoBehaviour
 {
@@ -50,6 +51,7 @@ public class Billboard : MonoBehaviour
                 this.GetComponent<Renderer>().material.color = new Color(.5f, .1f, 1.0f, (100-open_frames)/100f);
                 parts["background"].transform.eulerAngles = new Vector3(0,open_frames*1.8f,open_frames*1.8f);
                 parts["background"].transform.localScale = new Vector3(2,2+3*open_frames/100f,1);
+                parts["billboard"].transform.eulerAngles = new Vector3(0,270f+Math.Max(0,open_frames*1.8f-90f),0);
                 // TODO: make the open animation
                 return;
             }
