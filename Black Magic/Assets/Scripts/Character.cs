@@ -5,7 +5,7 @@ using System.Collections;
 using UnityEngine.Tilemaps;
 
 
-public class NewMonoBehaviourScript : MonoBehaviour
+public class Character : MonoBehaviour
 {
     float jump_height = 1.5f;
     float max_speed = 10f;
@@ -18,16 +18,26 @@ public class NewMonoBehaviourScript : MonoBehaviour
     float cast_time = 0f; // how much time left for this combo buffer
     string cur_combo = ""; // what the current string of inputs is
 
+    bool sax_unlock = false;
+    bool sax_cd = false;
     bool did_sax_bounce = false;
 
     string valid_inputs = "wasd"; // inputs in combo (i.e. wad in wadq)
     string valid_activators = "qzxc"; // activators for combo (i.e. q in wadq)
 
     void sax() {
-        if (cur_frames <= 1) {
+        cur_frames += 1; // tick up framerate every call
+        if (cur_frames == 1) { // first frame
             did_sax_bounce = false;
+            if (sax_cd) {
+                cur_move = null;
+                can_move = true;
+                attack = false;
+                cur_move = null; // uhoh, tried doing it on cd
+                return;
+            }
+            sax_cd = true;
         }
-        print("sax!");
         if (cur_frames <= 20) {
             Vector2 new_vel = new Vector2(direction*20,5);
             if (did_sax_bounce) {
@@ -86,14 +96,14 @@ public class NewMonoBehaviourScript : MonoBehaviour
         move_map = new Dictionary<string, System.Action>();
         // add all moves in reverse length order so longer combos are checked first
         move_map.Add("ddsc", ddsc);
-        move_map.Add("sax", sax);
         Application.targetFrameRate = 60;
+        
+        transform.position = spawn_point.transform.position;
     }
 
     // Update is called once per frame
     void Update()
     {
-        cur_frames += 1;
         // handle camera
 
         Vector3 charpos = character.transform.position;
@@ -200,6 +210,7 @@ public class NewMonoBehaviourScript : MonoBehaviour
             normal.Normalize();
             normal *= .3f;
             right = Vector2.Perpendicular(floor - new Vector2(transform.position.x,transform.position.y));
+            sax_cd = false; // on ground, reset cd
         }
 
 
@@ -253,5 +264,15 @@ public class NewMonoBehaviourScript : MonoBehaviour
                 destructable.SetTile(tilepos,null);
             }
         }
+    }
+
+    void OnTriggerEnter2D(Collider2D trigger) { // when trigger zones are enetered
+        string t_name = trigger.gameObject.name;
+        if (t_name == "sax_unlock" && sax_unlock == false) { // unlock sax!
+            sax_unlock = true;
+            move_map.Add("sax", sax);
+            //trigger.gameObject.GetComponent<Script>;
+        }
+        print(trigger.gameObject.name);
     }
 }
