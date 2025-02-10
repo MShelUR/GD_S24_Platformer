@@ -338,6 +338,12 @@ public class Character : MonoBehaviour
                 destructable.SetTile(tilepos,null);
             }
         }
+        if (collision.gameObject.name == "enemy") {
+            print("enemy!!");
+            if(collision.transform.position.y + 1 > transform.position.y){
+                died = true;
+            }
+        }
     }
 
     void OnTriggerEnter2D(Collider2D trigger) { // when trigger zones are enetered
