@@ -7,6 +7,10 @@ using UnityEngine.Tilemaps;
 
 public class Character : MonoBehaviour
 {
+    bool debug_mode = true; // DEBUG, unlock everything!
+
+
+
     Color background_color = new Color(.7f,.9f,.8f,1f);
 
     Dictionary<float, Color> height_color_map;
@@ -27,6 +31,12 @@ public class Character : MonoBehaviour
     bool sax_unlock = false;
     bool sax_cd = false;
     bool did_sax_bounce = false;
+
+    bool sdq_unlock = false;
+    bool asdq_unlock = false;
+    bool ddsc_unlock = false;
+    bool aadq_unlock = false;
+    bool wwq_unlock = false;
 
     string valid_inputs = "wasd"; // inputs in combo (i.e. wad in wadq)
     string valid_activators = "qzxc"; // activators for combo (i.e. q in wadq)
@@ -65,8 +75,24 @@ public class Character : MonoBehaviour
         attack = false;
     }
 
+    void sdq() {
+        print("sdq!");
+    }
+
+    void asdq() {
+        print("asdq!");
+    }
+
     void ddsc() {
         print("ddsc!");
+    }
+
+    void aadq() {
+        print("aadq!");
+    }
+
+    void wwq() {
+        print("wwq!");
     }
 
     Tilemap destructable;
@@ -103,7 +129,6 @@ public class Character : MonoBehaviour
         // set up movelist
         move_map = new Dictionary<string, System.Action>();
         // add all moves in reverse length order so longer combos are checked first
-        move_map.Add("ddsc", ddsc);
         Application.targetFrameRate = 60;
         
         transform.position = spawn_point.transform.position;
@@ -113,6 +138,21 @@ public class Character : MonoBehaviour
         height_color_map.Add(1000f,background_color); // above ground
         height_color_map.Add(-20f,new Color(.9f,.6f,.9f,1f)); // placeholder
         height_color_map.Add(-40f,new Color(.9f,.8f,.7f,1f)); // heck
+
+        if (debug_mode) { // debug, unlock all moves
+            sax_unlock = true;
+            sdq_unlock = true;
+            asdq_unlock = true;
+            ddsc_unlock = true;
+            aadq_unlock = true;
+            wwq_unlock = true;
+            move_map.Add("ddsc", ddsc);
+            move_map.Add("aadq", aadq);
+            move_map.Add("asdq", asdq);
+            move_map.Add("sax", sax);
+            move_map.Add("sdq", sdq);
+            move_map.Add("wwq", wwq);
+        }
     }
 
     Vector3 death_shake = new Vector3(0,0);
@@ -306,6 +346,9 @@ public class Character : MonoBehaviour
             sax_unlock = true;
             move_map.Add("sax", sax);
             //trigger.gameObject.GetComponent<Script>;
+        } else if (t_name == "sdq_unlock" && sdq_unlock == false) { // unlock sdq!
+            sdq_unlock = true;
+            move_map.Add("sdq", sdq);
         }
         print(trigger.gameObject.name);
     }

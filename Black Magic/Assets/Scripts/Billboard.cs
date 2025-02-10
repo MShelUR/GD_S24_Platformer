@@ -35,9 +35,9 @@ public class Billboard : MonoBehaviour
             }
         }
 
-        print(parts["background"]);
-        print(parts["billboard"]);
-        print(parts["text"]);
+        //print(parts["background"]);
+        //print(parts["billboard"]);
+        //print(parts["text"]);
 
         // .5, .1, 1
     }
