@@ -8,6 +8,8 @@ public class Billboard : MonoBehaviour
     
     bool opened = false;
     int open_frames = 0;
+    Vector3 orig_position;
+    GameObject watch_open;
 
     //GameObject background = transform.GetChild(0).GameObject;
     //GameObject billboard = transform.GetChild(1).GameObject;
@@ -19,6 +21,7 @@ public class Billboard : MonoBehaviour
     void Start()
     {
         parts = new Dictionary<string, GameObject>();
+        orig_position = transform.position;
 
         foreach (Transform childTransform in this.GetComponentsInChildren<Transform>())
         {
@@ -31,6 +34,13 @@ public class Billboard : MonoBehaviour
                 GameObject child2 = childTransform2.gameObject;
                 if (parts.ContainsKey(child2.name) == false) { // no duplicates
                     parts.Add(child2.name, child2);
+                    print(child2.name);
+                    if (child2.name == "dieded") {
+                        print("found dieded");
+                        transform.position = transform.position + new Vector3(999,999,999);
+                        child2.transform.position = child2.transform.position - new Vector3(999,999,999);
+                        watch_open = child2;
+                    }
                 }
             }
         }
@@ -56,6 +66,11 @@ public class Billboard : MonoBehaviour
                 return;
             }
         }
+        
+        if (watch_open != null && watch_open.GetComponent<first_death>().did == true) {
+            transform.position = orig_position;
+        }
+        
     }
 
 

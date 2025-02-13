@@ -3,15 +3,23 @@ using System.Collections.Generic; // dictionaries
 using System; // Func class
 using System.Collections;
 using UnityEngine.Tilemaps;
+using UnityEngine.SceneManagement;
 
 
 public class Character : MonoBehaviour
 {
-    bool debug_mode = true; // DEBUG, unlock everything!
+    bool debug_mode = false; // DEBUG, unlock everything!
 
+    public GameObject spawn_point; // object with reference point for spawn
+    public GameObject destructable_tileset; // object housing destructable tilemap
+    public GameObject ground_destructable;
+    public GameObject shadow_flame_object; // flame for shadow flame
+    public GameObject deadspike_object;
 
+    bool ended = false;
 
     Color background_color = new Color(.7f,.9f,.8f,1f);
+    Scene scene;
 
     Dictionary<float, Color> height_color_map;
     
@@ -33,6 +41,11 @@ public class Character : MonoBehaviour
     bool did_sax_bounce = false;
 
     bool sdq_unlock = false;
+    bool shadow_flaming = false;
+    int shadow_flame_dist = 0;
+    Vector3 shadow_flame_dir;
+    Vector3 shadow_flame_pos;
+
     bool asdq_unlock = false;
     bool ddsc_unlock = false;
     bool aadq_unlock = false;
@@ -42,6 +55,12 @@ public class Character : MonoBehaviour
     string valid_activators = "qzxc"; // activators for combo (i.e. q in wadq)
 
     void sax() {
+        if (sax_unlock == false) {
+            cur_move = null;
+            can_move = true;
+            attack = false;
+            return;
+        }
         cur_frames += 1; // tick up framerate every call
         if (cur_frames == 1) { // first frame
             did_sax_bounce = false;
@@ -75,12 +94,50 @@ public class Character : MonoBehaviour
         attack = false;
     }
 
+    void sdq_loop() {
+        shadow_flame_pos += shadow_flame_dir; // move SF
+        GameObject sf = (GameObject)Instantiate(shadow_flame_object, shadow_flame_pos, Quaternion.identity); // spawn SF
+        sf.GetComponent<shadow_flame>().dir = shadow_flame_dir.x;
+        sf.GetComponent<shadow_flame>().wait = shadow_flame_dist*2;
+        sf.GetComponent<shadow_flame>().destructable_tileset = destructable_tileset;
+        shadow_flame_dist += 1; // add to distance tracker
+        if (shadow_flame_dist > 7) { // past max distance, stop
+            shadow_flaming = false;
+        }
+    }
+
     void sdq() {
         print("sdq!");
+        if (shadow_flaming == false && sdq_unlock == true) {
+            shadow_flame_dist = 0;
+            shadow_flame_pos = transform.position + new Vector3(.5f+1*direction,-1f,0);
+            shadow_flame_dir = new Vector3(1.5f*direction,0,0);
+            shadow_flaming = true;
+        }
+        cur_move = null;
+        can_move = true;
+        attack = false;
     }
 
     void asdq() {
-        print("asdq!");
+        if (asdq_unlock == false) {
+            sdq();
+            return;
+        }
+        cur_frames += 1;
+        if (cur_frames == 1) {
+            character.constraints = RigidbodyConstraints2D.FreezePositionX | RigidbodyConstraints2D.FreezeRotation;
+            GameObject asdq = (GameObject)Instantiate(deadspike_object, transform.position, Quaternion.identity); // spawn deadspike
+            asdq.GetComponent<deadspike_script>().destructable_tileset = ground_destructable;
+        }
+        if (cur_frames <= 20) {
+            return;
+        }
+        
+        cur_move = null;
+        can_move = true;
+        attack = false;
+        character.constraints = RigidbodyConstraints2D.FreezeRotation;
     }
 
     void ddsc() {
@@ -99,8 +156,6 @@ public class Character : MonoBehaviour
     Rigidbody2D character;
     Dictionary<string, System.Action> move_map; // init movelist here so update sees it
     Camera cam;
-    public GameObject spawn_point; // object with reference point for spawn
-    public GameObject destructable_tileset; // object housing destructable tilemap
 
     GridLayout grid;
 
@@ -121,6 +176,7 @@ public class Character : MonoBehaviour
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start()
     {
+        scene = SceneManager.GetActiveScene();
         destructable = destructable_tileset.GetComponent<Tilemap>();
         grid = destructable_tileset.GetComponent<GridLayout>();
         character = GetComponent<Rigidbody2D>();
@@ -137,21 +193,28 @@ public class Character : MonoBehaviour
         // add in descending order
         height_color_map.Add(1000f,background_color); // above ground
         height_color_map.Add(-20f,new Color(.9f,.6f,.9f,1f)); // placeholder
-        height_color_map.Add(-40f,new Color(.9f,.8f,.7f,1f)); // heck
+        height_color_map.Add(-30f,new Color(.7f,.7f,.7f,1f)); // deep caves
+        height_color_map.Add(-50f,new Color(.7f,.5f,.5f,1f)); // deeper caves
+        height_color_map.Add(-65f,new Color(.8f,.5f,.5f,1f)); // heck
+        height_color_map.Add(-80f,new Color(.8f,.3f,.7f,1f)); // hecker
+        height_color_map.Add(-90f,new Color(.6f,.3f,.6f,1f)); // heckest
+        height_color_map.Add(-100f,new Color(.4f,.7f,.9f,1f)); // necro
 
+
+        move_map.Add("asdq", asdq);
+        move_map.Add("sax", sax);
+        move_map.Add("sdq", sdq);
+        
         if (debug_mode) { // debug, unlock all moves
             sax_unlock = true;
             sdq_unlock = true;
             asdq_unlock = true;
-            ddsc_unlock = true;
-            aadq_unlock = true;
-            wwq_unlock = true;
-            move_map.Add("ddsc", ddsc);
-            move_map.Add("aadq", aadq);
-            move_map.Add("asdq", asdq);
-            move_map.Add("sax", sax);
-            move_map.Add("sdq", sdq);
-            move_map.Add("wwq", wwq);
+            //ddsc_unlock = true;
+            //aadq_unlock = true;
+            //wwq_unlock = true;
+            //move_map.Add("ddsc", ddsc);
+            //move_map.Add("aadq", aadq);
+            //move_map.Add("wwq", wwq);
         }
     }
 
@@ -165,6 +228,27 @@ public class Character : MonoBehaviour
 
         Vector3 charpos = character.transform.position;
         Vector3 newpos = cam.transform.position-death_shake;
+
+        if (ended) {
+            var mousePos2 = Camera.main.ScreenToWorldPoint(Input.mousePosition);
+
+            if (mousePos2.x < transform.position.x) {
+                direction = -1;
+                transform.eulerAngles = new Vector3(
+                    transform.eulerAngles.x,
+                    180,
+                    transform.eulerAngles.z
+                );
+            } else {
+                direction = 1;
+                transform.eulerAngles = new Vector3(
+                    transform.eulerAngles.x,
+                    0,
+                    transform.eulerAngles.z
+                );
+            }
+            return;
+        }
 
         newpos.x = Math.Clamp(newpos.x,charpos.x-8,charpos.x+8);
         //newpos.x = Math.Max(Math.Min(newpos.x,charpos.x+50),charpos.x-50); // move cam when player gets near bounds
@@ -191,6 +275,10 @@ public class Character : MonoBehaviour
 
         cam.transform.position = newpos+death_shake;
         
+        if (shadow_flaming) {
+            sdq_loop();
+        }
+
         if (cur_move != null) {
             print(cur_move);
             move_map[cur_move](); // do move again with new frame
@@ -215,7 +303,7 @@ public class Character : MonoBehaviour
         if (died) { // do respawn stuff instead of movement
             respawning = true;
             Time.timeScale = 0;
-            character.GetComponent<Renderer>().material.color = new Color(1.0f, 1.0f, 1.0f, 0.5f);
+            character.GetComponent<Renderer>().material.color = new Color(1.0f, .5f, .5f, 0.5f);
             return;
         }
         foreach (char c in Input.inputString) { // inputString is deprecated, typecast keycode eventually
@@ -336,11 +424,13 @@ public class Character : MonoBehaviour
                 Vector2 hit = contact.point;
                 tilepos =  grid.LocalToCell(hit);
                 destructable.SetTile(tilepos,null);
+                cur_frames -= 3; // extend sax
+                
             }
         }
-        if (collision.gameObject.name == "enemy") {
+        if (collision.gameObject.transform.parent.gameObject.name == "enemies") {
             print("enemy!!");
-            if(collision.transform.position.y + 1 > transform.position.y){
+            if(collision.transform.position.y + collision.transform.localScale.y/1.2f > transform.position.y){
                 died = true;
             }
         }
@@ -348,14 +438,23 @@ public class Character : MonoBehaviour
 
     void OnTriggerEnter2D(Collider2D trigger) { // when trigger zones are enetered
         string t_name = trigger.gameObject.name;
+        print(trigger.gameObject.name);
         if (t_name == "sax_unlock" && sax_unlock == false) { // unlock sax!
             sax_unlock = true;
-            move_map.Add("sax", sax);
+            //move_map.Add("sax", sax);
             //trigger.gameObject.GetComponent<Script>;
         } else if (t_name == "sdq_unlock" && sdq_unlock == false) { // unlock sdq!
             sdq_unlock = true;
-            move_map.Add("sdq", sdq);
+            //move_map.Add("sdq", sdq);
+        } else if (t_name == "asdq_unlock" && asdq_unlock == false) { // unlock asdq!
+            asdq_unlock = true;
+            //move_map.Add("asdq", asdq);
+        } else if (t_name == "end_credits") { // end
+            ended = true;
+            transform.position = trigger.gameObject.transform.position;
+            character.constraints = RigidbodyConstraints2D.FreezePositionX | RigidbodyConstraints2D.FreezeRotation | RigidbodyConstraints2D.FreezePositionY;
+        } else if (t_name == "dieded") {
+            trigger.gameObject.GetComponent<first_death>().did = true;
         }
-        print(trigger.gameObject.name);
     }
 }
